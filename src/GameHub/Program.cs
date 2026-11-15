@@ -1,4 +1,6 @@
 // GameHub — multiplayer board-game server (Connect Four).
+using System.Net.Sockets;
+using GameHub.Client;
 using GameHub.Server;
 
 if (args.Length == 0)
@@ -19,9 +21,24 @@ switch (args[0])
         return 0;
     }
     case "play":
-        Console.WriteLine("The play client lands in the next commit. For now, talk to the");
-        Console.WriteLine("server with any TCP client — it speaks newline-delimited JSON.");
+    {
+        var host = ArgString(args, "--host", "localhost");
+        var port = ArgValue(args, "--port", 5000);
+        var name = ArgString(args, "--name", Environment.UserName);
+        using var cts = new CancellationTokenSource();
+        Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
+        try
+        {
+            var client = new GameClient(host, port, name);
+            await client.RunAsync(cts.Token);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or SocketException or OperationCanceledException)
+        {
+            Console.WriteLine($"Could not connect to {host}:{port} — is the server running? ({ex.Message})");
+            return 1;
+        }
         return 0;
+    }
     default:
         Console.WriteLine($"Unknown command '{args[0]}'.");
         PrintUsage();
@@ -43,4 +60,10 @@ static int ArgValue(string[] args, string flag, int fallback)
     return i >= 0 && i + 1 < args.Length && int.TryParse(args[i + 1], out var value)
         ? value
         : fallback;
+}
+
+static string ArgString(string[] args, string flag, string fallback)
+{
+    var i = Array.IndexOf(args, flag);
+    return i >= 0 && i + 1 < args.Length ? args[i + 1] : fallback;
 }

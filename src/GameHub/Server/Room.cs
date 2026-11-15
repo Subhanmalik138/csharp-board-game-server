@@ -165,8 +165,10 @@ public sealed class Room
 
     private void BroadcastBoard()
     {
-        SendBoardTo(Red, "R");
-        SendBoardTo(Yellow, "Y");
+        // Colours can swap on a rematch, so derive "you are" from the
+        // session's current names, not from the fixed seat a player sat in.
+        SendBoardTo(Red, Session.RedPlayer == Red.Name ? "R" : "Y");
+        SendBoardTo(Yellow, Session.RedPlayer == Yellow.Name ? "R" : "Y");
         List<IClientConnection> spectators;
         lock (_lock) spectators = _spectators.ToList();
         foreach (var spectator in spectators)
